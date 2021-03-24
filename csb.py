@@ -40,8 +40,7 @@ class ThreadResult():
                     print('')
         finally:
             self.lock.release()
-
-total_count = ThreadVariable()
+            
 result_printer = ThreadResult()
             
 class Tree:
@@ -54,14 +53,12 @@ class Tree:
     def distance(self, other):
         return math.sqrt(pow(other.x - self.x, 2) + pow(other.y - self.y, 2))
     
-def find_all_mt(distance, count, max_result, trees, bag, start, above):
-    global total_count
-    
-    if max_result <= total_count.value:
+def find_all_mt(thread_value, distance, count, max_result, trees, bag, start, above):
+    if max_result <= thread_value.value:
         return True
     
     if(len(bag) == count):
-        if total_count.add(1) <= max_result:
+        if thread_value.add(1) <= max_result:
             bag.sort(key=lambda tree: tree.index)
             result_printer.show(bag)
         return
@@ -81,22 +78,17 @@ def find_all_mt(distance, count, max_result, trees, bag, start, above):
             new_bag = list(bag)
             new_bag.append(trees[i])
             if len(new_bag) > 20:
-                #print(len(new_bag))
-                #proc = Process(target=find_all_mt, args=(distance, count, trees, new_bag, i + 1,))
-                #proc.start()
-                thread = Thread(target=find_all_mt, args=(distance, count, max_result, trees, new_bag, i + 1, above,))
+                thread = Thread(target=find_all_mt, args=(thread_value, distance, count, max_result, trees, new_bag, i + 1, above,))
                 thread.start()
             else:
-                find_all_mt(distance, count, max_result, trees, new_bag, i + 1, above)
+                find_all_mt(thread_value, distance, count, max_result, trees, new_bag, i + 1, above)
         new_bag = list(bag)
     
     return
     
-def find_all(distance, count, max_result, trees, bag, start):
-    global total_count
-    
+def find_all(thread_value, distance, count, max_result, trees, bag, start):
     if(len(bag) == count):
-        if total_count.add(1) <= max_result:
+        if thread_value.add(1) <= max_result:
             print('\n-----------------------------')
             for i in range(0, len(bag)):
                 print(bag[i].name, end='')
@@ -115,20 +107,13 @@ def find_all(distance, count, max_result, trees, bag, start):
         if is_valid:
             new_bag = list(bag)
             new_bag.append(trees[i])
-            find_all(distance, count, max_result, trees, new_bag, i + 1)
+            find_all(thread_value, distance, count, max_result, trees, new_bag, i + 1)
         new_bag = list(bag)
     
     return
             
 
 def main():    
-    
-    #file = open('xy.txt', 'r')
-    #file = open('xy2.txt', 'r')
-    #file = open('xy3.txt', 'r')
-    #lines = file.readlines()
-    #file.close();
-
     file = open(sys.argv[1], 'r')
     lines = file.readlines()
     file.close();
@@ -145,7 +130,6 @@ def main():
     distance = 15
     number_of_trees = 20
     max_result = 30
-    rand = False
     above = True
     shuffle = False
     
@@ -162,18 +146,18 @@ def main():
         if sys.argv[6] == 'b':
             above = False
 
-    procs = []
+    threads = []
     
     if shuffle:
         for value in range(max_result):
             random.shuffle(trees)
-            proc = Process(target=find_all_mt, args=(distance, number_of_trees, 1, trees, [], 0, above))
-            proc.start()
-            procs.append(proc)
-        for p in procs:
-            p.join()
+            thread = Thread(target=find_all_mt, args=(ThreadVariable(), distance, number_of_trees, 1, list(trees), [], 0, above))
+            thread.start()
+            threads.append(thread)
+        for t in threads:
+            t.join()
     else:
-        find_all_mt(distance, number_of_trees, max_result, trees, [], 0, above)
+        find_all_mt(ThreadVariable(), distance, number_of_trees, max_result, trees, [], 0, above)
     
 if __name__ == "__main__":
     main()
